@@ -1,96 +1,66 @@
-from flask import Flask,jsonify,request,render_template
+from flask import Flask,request,jsonify
 from flask_mysqldb import MySQL
+from flask_cors import CORS
 
 app=Flask(__name__)
+
 app.config['MYSQL_HOST']='localhost'
-app.config['MYSQL_USER']='root' 
+app.config['MYSQL_USER']='root'
 app.config['MYSQL_PASSWORD']='roottoor'
-app.config['MYSQL_DB']='prathibha_cse'
+app.config['MYSQL_DB']='project'
 mysql=MySQL(app)
+CORS(app)
 
 @app.route('/')
-def hello_world():
-    return 'Hello World'
+def home():
+    return 'job listing'
+@app.route('/getjoblisting',methods=["GET"])
+def getjob():
+        sql="select * from job_listing"
+        cur=mysql.connection.cursor()
+        cur.execute(sql)
+        results=cur.fetchall()
+        cur.close()
+        return jsonify(results)
 
-@app.route('/myname/<name>')
-def myname(name):
-    return jsonify({"message":"hello","name":name}) 
+@app.route('/postjoblisting',methods=["POST"])
+def post():
+        json=request.get_json()
+        job_id=json.get("job_id")
+        job_name=json.get("job_name")
+        job_description=json.get("job_description")
+        qualification=json.get("qualification")
+        email=json.get("email")
+        job_type=json.get("job_type")
+        company_name=json.get("company_name")
+        location=json.get("location")
+        salary=json.get("salary")
+        last_date=json.get("last_date")
+        cur=mysql.connection.cursor()
+        sql="insert into job_listing(job_id,job_name,job_description,qualification,email,job_type,company_name,location,salary,last_date) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+        val=[job_id,job_name,job_description,qualification,email,job_type,company_name,location,salary,last_date]
+        cur.execute(sql,val)
+        mysql.connection.commit() 
+        cur.close()
+        return "success"
 
-
-@app.route('/mydetails',methods=["get","post"])
-def det():
-    name=request.args.get("name")
-    city=request.args.get("city")
-    address=request.args.get("address")
-    return f"{name} {city} {address}"
-
-@app.route('/myhtml')
-def myhtml():
-    return render_template("home.html")
-
-@app.route('/userDetail')
-def userDetail():
-    id=request.args.get("id")
-    sql=f"SELECT * FROM user where id={id}"
-    cur=mysql.connection.cursor()
-    cur.execute(sql)
-    results=cur.fetchall()
-    print(results)
-    cur.close()
-    
-    #id="18"
-    #name="hgdt"
-    #email="h@gmail.com"
-    #password="adsfg"
-
-    return render_template("user_detail.html",id=results[0][0],name=results[0][1],email=results[0][2],password=results[0][3])
-
-@app.route('/getData')
-def getData():
-    id=request.args.get("id")
-    sql=""
-    if id is None:
-        sql=f"SELECT * FROM user"
-    else:
-        sql="SELECT * FROM user where id={id}"
-    cur=mysql.connection.cursor()
-    cur.execute("SELECT*FROM user")
-    results=cur.fetchall()
+@app.route('/searchjoblisting', methods=["GET"])
+def search_job():
+    data = request.get_json()  
+    keyword = data.get("keyword") 
+    cur = mysql.connection.cursor()
+    sql = """SELECT * FROM job_listing 
+             WHERE job_name LIKE %s 
+                OR location LIKE %s 
+                OR company_name LIKE %s"""
+    val=(f"%{keyword}%",f"%{keyword}%",f"%{keyword}%")
+    cur.execute(sql,val)
+    results = cur.fetchall()
     cur.close()
     return jsonify(results)
 
-@app.route('/register_save', methods=["GET", "post"])
-def register_save():
-    print(request.method)
-    if( request.method )== "GET":
-        return render_template("register.html")
-    else:
-        id=request.form.get("id")
-        name=request.form.get("name")
-        email = request.form.get("email")
-        password = request.form.get("password")
-        cur = mysql.connection.cursor()
-        sql = "INSERT INTO user(id,name,email, password) VALUES (%s, %s,%s,%s)"
-        val = [id,name,email, password]
-        cur.execute(sql, val)
-        mysql.connection.commit()
-        cur.close()
-        return "register success"
-@app.route('/getDataInHtml')
-def getDataInHtml():
-    id=request.args.get("id")
-    sql=""
-    if id is None:
-        sql="SELECT * FROM user"
-    else:
-        sql=f"SELECT * FROM user where id={id}"
-        
-    cur=mysql.connection.cursor()
-    cur.execute("SELECT*FROM user")
-    results=cur.fetchall()
-    cur.close()
-    return render_template("userlist.html",userlist=results)
 
+    
 
 if __name__=='__main__':
-    app.run()
+    app.run(host='192.168.20.83', port=5000)
